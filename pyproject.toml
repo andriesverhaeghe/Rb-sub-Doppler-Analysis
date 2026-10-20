@@ -1,0 +1,57 @@
+[project]
+name = "Rb_Spec_Analysis"
+version = "0.1.0"
+description = "Analyses of Rb Spectroscopy"
+readme = "README.md"
+requires-python = ">=3.9,<3.10"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "sympy",
+    "pandas",
+    "ipykernel",
+    "scipy>0.15",
+    "lmfit>=0.9.5",
+]
+
+[project.optional-dependencies]
+gui = [
+    "wxPython",
+    "elecsus @ git+https://github.com/durham-qlm/ElecSus",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.0",
+    "ty>=0.0.70",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[project.scripts]
+env = "rb_spec_analysis:print_packages"
+pipeline = "rb_spec_analysis:pipeline"
+reset_defaults = "rb_spec_analysis:reset_defaults"
+save_params = "rb_spec_analysis:save_params"
+pull_params = "rb_spec_analysis:pull_params"
+sd_pipeline = "rb_spec_analysis:sd_pipeline"
+
+[tool.ruff]
+line-length = 100
+exclude = [
+    "example_data/",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+extend-select = ["E501"]
+
+[tool.ty]
+environment = { root = ["./src"] }
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["elecsus", "elecsus.**", "wx", "wx.**"]
