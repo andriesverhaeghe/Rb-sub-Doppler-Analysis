@@ -17,7 +17,6 @@ from rb_spec_analysis.schemas.analysis_schemas import (
     Linearised,
     NormalisedDoppler,
     OffResonance,
-    SmoothedSubDoppler,
     SubDopplerPeaks,
     TheoryFit,
 )
@@ -73,7 +72,7 @@ def plot_crop_selection(time, normalised_etalon, normalised_doppler, sub_doppler
 
 
 def plot_cropped_signals(cropped: CroppedData) -> None:
-    t_ms = cropped.Cropped_Time * 1e3
+    t_ms = cropped.Cropped_Time
 
     _fig, ax = plt.subplots(3, sharex=True, figsize=(8, 7))
     ax[0].plot(t_ms, cropped.Cropped_Etalon, color=BLUE)
@@ -94,7 +93,7 @@ def plot_cropped_signals(cropped: CroppedData) -> None:
 # --------------------------------------------------------------------------- #
 def plot_etalon_peaks(cropped: CroppedData, lin: Linearised) -> None:
     plt.figure(figsize=(6, 4))
-    plt.plot(cropped.Cropped_Time * 1e3, cropped.Cropped_Etalon, zorder=1, color=BLUE)
+    plt.plot(cropped.Cropped_Time, cropped.Cropped_Etalon, zorder=1, color=BLUE)
     plt.plot(lin.peak_time_ms, lin.etalon_peaks, "x", markersize=10, zorder=2, color=RED)
     plt.xlabel("Time (ms)")
     plt.ylabel("Voltage (V)")
@@ -112,11 +111,11 @@ def plot_peak_positions(lin: Linearised) -> None:
 
 
 def plot_peak_difference(cropped: CroppedData, lin: Linearised) -> None:
-    t_ms = cropped.Cropped_Time * 1e3
+    t_ms = cropped.Cropped_Time
 
     plt.figure(figsize=(6, 4))
     plt.plot(lin.peak_time_ms, lin.difference, "o")
-    plt.plot(t_ms, poly7(t_ms, *lin.difference_coeffs))
+    plt.plot(t_ms, poly1(t_ms, *lin.difference_coeffs))
     plt.xlabel("Peak Position (ms)")
     plt.ylabel("Difference (ms)")
     plt.show()
@@ -128,19 +127,17 @@ def plot_linearised_etalon(cropped: CroppedData, lin: Linearised) -> None:
     plt.ylabel("Normalised signal (V)")
     plt.show()
 
-    freq_ghz = lin.product / 1e3
     plt.figure(figsize=(6, 4))
-    plt.plot(freq_ghz, cropped.Cropped_Etalon)
+    plt.plot(lin.product, cropped.Cropped_Etalon)
     if cropped.Cropped_Doppler is not None:  # Doppler data is optional
-        plt.plot(freq_ghz, cropped.Cropped_Doppler)
+        plt.plot(lin.product, cropped.Cropped_Doppler)
     plt.xlabel("Frequency (GHz)")
     plt.ylabel("Signal (V)")
     plt.show()
 
 
 def figure_8(cropped: CroppedData, lin: Linearised) -> None:
-    t_ms = cropped.Cropped_Time * 1e3
-    freq_ghz = lin.product / 1e3
+    t_ms = cropped.Cropped_Time
     n = len(lin.peak_number)
 
     fig = plt.figure(figsize=(9 * 1.5, 7 * 1.3), constrained_layout=True)
@@ -163,8 +160,8 @@ def figure_8(cropped: CroppedData, lin: Linearised) -> None:
         zorder=1,
     )
     ax3.scatter(lin.peak_time_ms, lin.difference, s=4, marker="x", color="black", zorder=2, lw=15)
-    ax3.plot(t_ms, poly7(t_ms, *lin.difference_coeffs), color="black", zorder=1, linestyle="dashed")
-    ax4.plot(freq_ghz, cropped.Cropped_Etalon, color=BLUE)
+    ax3.plot(t_ms, poly1(t_ms, *lin.difference_coeffs), color="black", zorder=1, linestyle="dashed")
+    ax4.plot(lin.product, cropped.Cropped_Etalon, color=BLUE)
 
     ax1.set_ylim(0, 1.15)
     ax4.set_ylim(0, 1.15)
@@ -205,6 +202,7 @@ def figure_8(cropped: CroppedData, lin: Linearised) -> None:
 def sub_doppler_selection(detuning: np.ndarray, sub_dopp: np.ndarray):
     plt.plot(detuning, sub_dopp)
 
+    plt.xlabel(FREQ_LABEL)
     plt.title("Select six points for linear region")
     x_sub_dopp = np.array(plt.ginput(6))
 
@@ -219,46 +217,45 @@ def plot_sub_doppler(
     for x, y in off_res.selection_points:
         plt.scatter(x, y, s=100, marker="x", zorder=2, color="red")
     plt.plot(lin.product, cropped.Cropped_Sub_Doppler, zorder=1)
-    plt.xlabel("Frequency with Arbitrary Offset (MHz)")
+    plt.xlabel(FREQ_LABEL)
     plt.ylabel("Photodiode Output (V)")
     plt.show()
 
 
 def plot_off_resonance(cropped: CroppedData, lin: Linearised, off_res: OffResonance) -> None:
-    freq_mhz = lin.product
-
     plt.plot(off_res.off_resonance_x, off_res.off_resonance_trace, "ok")
-    plt.plot(freq_mhz, cropped.Cropped_Sub_Doppler)
-    plt.plot(freq_mhz, poly5(freq_mhz, *off_res.coefficients))
-    plt.xlabel("Frequency with Arbitrary Offset (MHz)")
+    plt.plot(lin.product, cropped.Cropped_Sub_Doppler)
+    plt.plot(lin.product, poly5(lin.product, *off_res.coefficients))
+    plt.xlabel(FREQ_LABEL)
+    plt.xlabel("Frequency with Arbitrary Offset (GHz)")
     plt.ylabel("Signal (V)")
     plt.show()
 
-    plt.plot(freq_mhz / 1e3, off_res.normalised)
+    plt.plot(lin.product, off_res.normalised)
     plt.xlabel(FREQ_LABEL)
     plt.ylabel("Transmission")
     plt.show()
 
 
-def sub_dopp_absolute_freq(t: np.ndarray, sub_dopp: np.ndarray):
-    plt.plot(range(len(t)), sub_dopp)
+def sub_dopp_absolute_freq(detuning: np.ndarray, sub_dopp: np.ndarray):
+    plt.plot(range(len(detuning)), sub_dopp)
+    plt.xlabel("Detuning Index")
 
     plt.title("Select eight points for hyperfine regions")
-    x_cuts = np.array(plt.ginput(8))
+    x_cuts = np.array(plt.ginput(8)).astype(np.int64)
 
     plt.show(block=False)
     plt.close()
-
     params.save_param("ABSOLUTE_FREQ_CUTS", x_cuts)
 
 
-def plot_absolute_freq_cuts(sub_doppler, cuts) -> None:
+def plot_absolute_freq_cuts(detuning, sub_doppler, cuts) -> None:
     """cuts: iterable of (data-point index, value) pairs."""
-    for x, y in cuts:
-        plt.scatter(x, y, s=100, marker="x", zorder=2, color="red")
-        plt.vlines(x, 0, max(sub_doppler), linestyle="dashed", color="black")
-    plt.plot(range(len(sub_doppler)), sub_doppler)
-    plt.xlabel("Data Point #")
+    for x_ind, y in cuts:
+        plt.scatter(detuning[x_ind], y, s=100, marker="x", zorder=2, color="red")
+        plt.vlines(detuning[x_ind], 0, max(sub_doppler), linestyle="dashed", color="black")
+    plt.plot(detuning, sub_doppler)
+    plt.xlabel(FREQ_LABEL)
     plt.ylabel("Photodiode Output (V)")
     plt.show()
 
@@ -273,16 +270,12 @@ def select_sub_doppler_hyperfine_peaks(
     """
     x_cuts must be a 1D array
     """
-    kdetuning = detuning / 1e3
-
     peaks: list[list] = []
 
     for i in range(0, n_regions * 2, 2):
         a, b = int(x_cuts[i,0]), int(x_cuts[i+1,0])
 
-        plt.plot(kdetuning[a:b], sub_dopp[a:b])
-        print(r'Select either side of atomic resonance')
-
+        plt.plot(detuning[a:b], sub_dopp[a:b])
         plt.title(f"Select {n_points} of the hyperfine structure")
         x_points = np.array(plt.ginput(n_points))[:, 0]
 
@@ -296,8 +289,6 @@ def select_sub_doppler_hyperfine_peaks(
 def figure_10(
     cropped: CroppedData, lin: Linearised, off_res: OffResonance, sd_peaks: SubDopplerPeaks
 ) -> None:
-    freq_mhz = lin.product
-    freq_ghz = freq_mhz / 1e3
     slope, intercept = sd_peaks.sub_doppler_peak_coefficients
 
     fig = plt.figure(figsize=(9 * 1.5, 9 * 1.3 * 1.5), constrained_layout=True)
@@ -310,24 +301,24 @@ def figure_10(
     plt.setp(ax3.get_xticklabels(), visible=False)
 
     ax1.plot(
-        off_res.off_resonance_x / 1e3,
+        off_res.off_resonance_x,
         off_res.off_resonance_trace,
         "o",
         color="black",
         rasterized=True,
     )
-    ax1.plot(freq_ghz, cropped.Cropped_Sub_Doppler, RED)
-    ax2.plot(freq_ghz, cropped.Cropped_Sub_Doppler, RED, zorder=1)
+    ax1.plot(lin.product, cropped.Cropped_Sub_Doppler, RED)
+    ax2.plot(lin.product, cropped.Cropped_Sub_Doppler, RED, zorder=1)
     ax2.plot(
-        freq_ghz,
-        poly5(freq_mhz, *off_res.coefficients),
+        lin.product,
+        poly5(lin.product, *off_res.coefficients),
         "black",
         linestyle="dashed",
         zorder=2,
         lw=2,
         rasterized=True,
     )
-    ax3.plot(freq_ghz, off_res.normalised, color=RED)
+    ax3.plot(lin.product, off_res.normalised, color=RED)
     ax4.scatter(
         sd_peaks.detected_sub_doppler_peaks,
         sd_peaks.absolute_detunings,
@@ -337,9 +328,8 @@ def figure_10(
         zorder=2,
         lw=15,
     )
-    ax4.plot(freq_ghz, slope * freq_ghz + intercept, OLIVE, zorder=2)
+    ax4.plot(lin.product, slope * lin.product + intercept, OLIVE, zorder=2)
 
-    ax4.set_xlim(0, 10)
     ax4.set_ylim(-5, 6)
     ax4.set_yticks([-4, 0, 4])
     ax3.set_ylim(0.16, 1.03)
@@ -355,64 +345,60 @@ def figure_10(
 
 
 def plot_smoothed_peaks(
-    lin: Linearised, smoothed: SmoothedSubDoppler, sd_peaks: SubDopplerPeaks
+    lin: Linearised, off_res: OffResonance, sd_peaks: SubDopplerPeaks,
+    ranges: np.ndarray | None = None
 ) -> None:
-    freq_ghz = lin.product / 1e3
     peaks = sd_peaks.detected_sub_doppler_peaks
 
-    # (smoothed trace, x offset, title, xlim, ylim, yticks/xticks, peak slice)
+    if ranges is None:
+        ranges = np.array([
+            [1.4, 0.78],
+            [2, 0.92],
+            [2.78, 0.56],
+            [3.1, 0.72],
+            [5.78, 0.70],
+            [5.96, 0.84],
+            [8.15, 0.855],
+            [8.55, 0.89]
+        ])
+
     panels = [
         (
-            smoothed.smooth100,
-            0.005,
             "1st Absorption Peak",
-            (1.4, 2),
-            (0.78, 0.92),
-            {"yticks": [0.8, 0.85, 0.9]},
+            ranges[0:2,0],
+            ranges[0:2,1],
             slice(0, 6),
         ),
         (
-            smoothed.smooth100,
-            0.005,
             "2nd Absorption Peak",
-            (2.78, 3.1),
-            (0.56, 0.72),
-            {"yticks": [0.6, 0.65, 0.7]},
+            ranges[2:4,0],
+            ranges[2:4,1],
             slice(6, 12),
         ),
         (
-            smoothed.smooth100,
-            0.005,
             "3rd Absorption Peak",
-            (5.78, 5.96),
-            (0.70, 0.84),
-            {"yticks": [0.72, 0.77, 0.82]},
+            ranges[4:6,0],
+            ranges[4:6,1],
             slice(12, 18),
         ),
         (
-            smoothed.smooth70,
-            0.0,
             "4th Absorption Peak",
-            (8.15, 8.55),
-            (0.855, 0.89),
-            {"xticks": [8.3, 8.5]},
+            ranges[6:8,0],
+            ranges[6:8,1],
             slice(18, 24),
         ),
     ]
 
     _fig, axs = plt.subplots(2, 2, figsize=(9, 9))
-    for ax, (trace, dx, title, xlim, ylim, ticks, sl) in zip(axs.flat, panels):
-        ax.plot(freq_ghz + dx, trace, RED)
+    for ax, (title, xlim, ylim, sl) in zip(axs.flat, panels):
+        ax.plot(lin.product, off_res.normalised, RED)
         ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
-        if "yticks" in ticks:
-            ax.set_yticks(ticks["yticks"])
-        if "xticks" in ticks:
-            ax.set_xticks(ticks["xticks"])
+        # ax.set_ylim(ylim)
+
         ax.set_title(title)
         ax.tick_params(axis="both", labelsize=12)
-        for p in peaks[sl]:
-            ax.vlines(p, ylim[0] - 0.01, ylim[1] + 0.01, linestyle="dashed", color="black", lw=0.7)
+        # for p in peaks[sl]:
+        #     ax.vlines(p, ylim[0] - 0.01, ylim[1] + 0.01, linestyle="dashed", color="black", lw=0.7)
     plt.show()
 
 

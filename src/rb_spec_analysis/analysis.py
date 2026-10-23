@@ -52,7 +52,7 @@ from rb_spec_analysis.utils.polynomials import poly1, poly5, poly7
 
 
 class Constants(Enum):
-    FSR = 857.14  # MHz
+    FSR = .85714  # GHz
 
 
 class RbAnalysis:
@@ -189,7 +189,7 @@ class RbAnalysis:
         peak_idx = np.asarray(peak_idx, dtype=int)
 
         etalon_peaks = normalised_etalon[peak_idx]
-        peak_time_ms = zeroed_time[peak_idx] * 1e3
+        peak_time_ms = zeroed_time[peak_idx]
         peak_number = np.arange(len(etalon_peaks))
 
         # Linear fit: peak number -> peak time
@@ -197,16 +197,16 @@ class RbAnalysis:
 
         # Deviation from linear, fitted with a 7th order polynomial in time
         difference = peak_time_ms - poly1(peak_number, *peak_coeffs)
-        difference_coeffs, _ = curve_fit(poly7, peak_time_ms, difference, [1.0] * 8)
+        difference_coeffs, _ = curve_fit(poly1, peak_time_ms, difference, [1.0] * 2)
 
-        linearised_time = zeroed_time * 1e3 - poly7(zeroed_time * 1e3, *difference_coeffs)
+        linearised_time = zeroed_time - poly1(zeroed_time, *difference_coeffs)
         zeroed_linear_time = zero(linearised_time)
 
         zeroed_time_peaks = zeroed_linear_time[peak_idx]
         peak_spacing = float(
             (zeroed_time_peaks[-1] - zeroed_time_peaks[0]) / (len(zeroed_time_peaks) - 1)
         )
-        freq_per_time = self.constants.FSR.value / peak_spacing  # MHz per ms
+        freq_per_time = self.constants.FSR.value / peak_spacing  # GHz per ms
 
         return Linearised(
             zeroed_linear_time=zeroed_linear_time,
@@ -429,9 +429,9 @@ class RbAnalysis:
         plot_off_resonance(cropped_data, lin, off_res)
 
         if select_points:
-            sub_dopp_absolute_freq(lin.zeroed_linear_time, cropped_data.Cropped_Sub_Doppler)
+            sub_dopp_absolute_freq(lin.product, cropped_data.Cropped_Sub_Doppler)
 
-        plot_absolute_freq_cuts(cropped_data.Cropped_Sub_Doppler, self._load("ABSOLUTE_FREQ_CUTS"))
+        plot_absolute_freq_cuts(lin.product, cropped_data.Cropped_Sub_Doppler, self._load("ABSOLUTE_FREQ_CUTS"))
 
         if select_points:
             select_sub_doppler_hyperfine_peaks(
@@ -440,7 +440,9 @@ class RbAnalysis:
 
         sd_peaks = self.sd_peaks()
         figure_10(cropped_data, lin, off_res, sd_peaks)
-        plot_smoothed_peaks(lin, self.smooth(lin, off_res, cropped_data), sd_peaks)
+        # plot_smoothed_peaks(lin, self.smooth(lin, off_res, cropped_data), sd_peaks)
+        ranges = lin.product[self._load("ABSOLUTE_FREQ_CUTS")]
+        plot_smoothed_peaks(lin, off_res, sd_peaks, ranges)
 
         if select_points and self.HS_Freq is not None and self.HS_Volt is not None:
             select_hot_spectrum_zeros(self.HS_Freq, self.HS_Volt)
