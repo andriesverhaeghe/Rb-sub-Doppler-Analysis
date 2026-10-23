@@ -22,7 +22,7 @@ from rb_spec_analysis.schemas.analysis_schemas import (
 )
 from rb_spec_analysis.utils.data import CroppedData
 from rb_spec_analysis.utils.params import Params
-from rb_spec_analysis.utils.polynomials import poly1, poly5, poly7
+from rb_spec_analysis.utils.polynomials import poly1, poly5
 
 PURPLE, YELLOW, BLUE, RED, OLIVE = "#68246D", "#FFD53A", "#00AEEF", "#BE1E2D", "#AFA961"
 
@@ -136,7 +136,7 @@ def plot_linearised_etalon(cropped: CroppedData, lin: Linearised) -> None:
     plt.show()
 
 
-def figure_8(cropped: CroppedData, lin: Linearised) -> None:
+def figure_8(cropped: CroppedData, lin: Linearised, peak_lines: bool = True) -> None:
     t_ms = cropped.Cropped_Time
     n = len(lin.peak_number)
 
@@ -149,6 +149,10 @@ def figure_8(cropped: CroppedData, lin: Linearised) -> None:
 
     ax1.plot(t_ms, cropped.Cropped_Etalon, color=BLUE)
     ax1.plot(lin.peak_time_ms, lin.etalon_peaks, "x", linewidth=5, zorder=2, color="black")
+
+    if peak_lines:
+        ax1.vlines(lin.peak_time_ms, 0, lin.etalon_peaks)
+
     ax2.scatter(
         lin.peak_number + 1, lin.peak_time_ms, s=4, color="black", marker="x", zorder=2, lw=15
     )
@@ -169,9 +173,9 @@ def figure_8(cropped: CroppedData, lin: Linearised) -> None:
     ax1.set_ylabel("Normalised\n Etalon Signal", fontsize=20)
     ax2.set_ylabel("Time (ms)", fontsize=20)
     ax2.set_xlabel("Peak Number", fontsize=20)
-    ax2.set_xticks([2, 4, 6, 8, 10, 12, 14])
-    ax2.set_yticks([0, 20, 40, 60, 80, 100, 120, 140])
-    ax3.set_xticks([0, 20, 40, 60, 80, 100, 120, 140])
+    ax2.set_xticks([i for i in range(
+        lin.peak_number.min() + 1, lin.peak_number.max() + 2
+    )])
     ax3.set_xlabel("Time (ms)", fontsize=20)
     ax3.set_ylabel("Difference (ms)", fontsize=20)
     ax4.set_xlabel(FREQ_LABEL)
@@ -346,59 +350,49 @@ def figure_10(
 
 def plot_smoothed_peaks(
     lin: Linearised, off_res: OffResonance, sd_peaks: SubDopplerPeaks,
-    ranges: np.ndarray | None = None
+    ranges: np.ndarray
 ) -> None:
     peaks = sd_peaks.detected_sub_doppler_peaks
-
-    if ranges is None:
-        ranges = np.array([
-            [1.4, 0.78],
-            [2, 0.92],
-            [2.78, 0.56],
-            [3.1, 0.72],
-            [5.78, 0.70],
-            [5.96, 0.84],
-            [8.15, 0.855],
-            [8.55, 0.89]
-        ])
 
     panels = [
         (
             "1st Absorption Peak",
             ranges[0:2,0],
-            ranges[0:2,1],
             slice(0, 6),
         ),
         (
             "2nd Absorption Peak",
             ranges[2:4,0],
-            ranges[2:4,1],
             slice(6, 12),
         ),
         (
             "3rd Absorption Peak",
             ranges[4:6,0],
-            ranges[4:6,1],
             slice(12, 18),
         ),
         (
             "4th Absorption Peak",
             ranges[6:8,0],
-            ranges[6:8,1],
             slice(18, 24),
         ),
     ]
 
     _fig, axs = plt.subplots(2, 2, figsize=(9, 9))
-    for ax, (title, xlim, ylim, sl) in zip(axs.flat, panels):
+    for ax, (title, xlim, sl) in zip(axs.flat, panels):
+        start = np.searchsorted(lin.product, xlim[0], side='left')
+        end = np.searchsorted(lin.product, xlim[1], side='right')
+
+        line = off_res.normalised[start:end]
+
         ax.plot(lin.product, off_res.normalised, RED)
         ax.set_xlim(xlim)
-        # ax.set_ylim(ylim)
+        ax.set_ylim(line.min() * 0.95, line.max() * 1.05)
 
         ax.set_title(title)
         ax.tick_params(axis="both", labelsize=12)
-        # for p in peaks[sl]:
-        #     ax.vlines(p, ylim[0] - 0.01, ylim[1] + 0.01, linestyle="dashed", color="black", lw=0.7)
+        for p in peaks[sl]:
+            ax.vlines(p, line.min()*0.95, line.max()*1.05,
+                      linestyle="dashed", color="black", lw=0.7)
     plt.show()
 
 

@@ -57,7 +57,8 @@ class RbAnalysisSubDopp(RbAnalysis):
         if select_points:
             sub_dopp_absolute_freq(lin.product, cropped_data.Cropped_Sub_Doppler)
 
-        plot_absolute_freq_cuts(lin.product, cropped_data.Cropped_Sub_Doppler, self._load("ABSOLUTE_FREQ_CUTS"))
+        plot_absolute_freq_cuts(lin.product, cropped_data.Cropped_Sub_Doppler,
+                                self._load("ABSOLUTE_FREQ_CUTS"))
 
         if select_points:
             select_sub_doppler_hyperfine_peaks(
@@ -67,7 +68,6 @@ class RbAnalysisSubDopp(RbAnalysis):
         sd_peaks = self.sd_peaks()
         ranges = lin.product[self._load("ABSOLUTE_FREQ_CUTS")]
         figure_10(cropped_data, lin, off_res, sd_peaks)
-        # plot_smoothed_peaks(lin, self.smooth(lin, off_res, cropped_data), sd_peaks, ranges)
         plot_smoothed_peaks(lin, off_res, sd_peaks, ranges)
 
 # --------------------------------------------------------------------------- #

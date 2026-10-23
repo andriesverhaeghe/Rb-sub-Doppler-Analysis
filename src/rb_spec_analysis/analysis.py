@@ -48,7 +48,7 @@ from rb_spec_analysis.schemas.analysis_schemas import (
 from rb_spec_analysis.utils.array import zero
 from rb_spec_analysis.utils.data import CroppedData, Data, load_data
 from rb_spec_analysis.utils.params import Params
-from rb_spec_analysis.utils.polynomials import poly1, poly5, poly7
+from rb_spec_analysis.utils.polynomials import poly1, poly5
 
 
 class Constants(Enum):
@@ -431,7 +431,8 @@ class RbAnalysis:
         if select_points:
             sub_dopp_absolute_freq(lin.product, cropped_data.Cropped_Sub_Doppler)
 
-        plot_absolute_freq_cuts(lin.product, cropped_data.Cropped_Sub_Doppler, self._load("ABSOLUTE_FREQ_CUTS"))
+        plot_absolute_freq_cuts(lin.product, cropped_data.Cropped_Sub_Doppler,
+                                self._load("ABSOLUTE_FREQ_CUTS"))
 
         if select_points:
             select_sub_doppler_hyperfine_peaks(
@@ -440,7 +441,7 @@ class RbAnalysis:
 
         sd_peaks = self.sd_peaks()
         figure_10(cropped_data, lin, off_res, sd_peaks)
-        # plot_smoothed_peaks(lin, self.smooth(lin, off_res, cropped_data), sd_peaks)
+
         ranges = lin.product[self._load("ABSOLUTE_FREQ_CUTS")]
         plot_smoothed_peaks(lin, off_res, sd_peaks, ranges)
 
