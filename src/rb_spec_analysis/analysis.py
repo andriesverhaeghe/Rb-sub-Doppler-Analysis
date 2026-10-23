@@ -56,18 +56,18 @@ class Constants(Enum):
 
 
 class RbAnalysis:
-    prm_loc = Path(__file__).resolve().parent / "params"
-
     def __init__(self, use_example_data: bool = False):
         # this file: <repo>/src/rb_spec_analysis/analysis.py -> parents[2] is <repo>
         root = Path(__file__).resolve().parents[2]
         dataloc: Path = root / ("example_data" if use_example_data else "real_data")
 
+        self.prm_loc = Path(__file__).resolve().parent / "params"
+
         self.data: Data = load_data(dataloc)
         self.__preprocess()
 
         self.constants = Constants
-        self.defaults = Params()
+        self.params = Params()
 
         self.load_param_retries = 0
 
@@ -140,7 +140,7 @@ class RbAnalysis:
             self.load_param_retries += 1
 
             if self.load_param_retries < 3:
-                self.defaults.reset_param(file_name)
+                self.params.reset_param(file_name)
                 param = self._load(file_name)
 
                 self.load_param_retries = 0
@@ -155,6 +155,11 @@ class RbAnalysis:
         except Exception as e:
             print(e)
             raise
+
+    def check_params(self):
+        if not (self.prm_loc.is_dir() and any(self.prm_loc.iterdir())):
+            print("No Params found, loading from defaults")
+            self.params.reset()
 
     def crop_frequency(self) -> CroppedData:
         t_min, t_max = self.Time.min(), self.Time.max()
@@ -392,6 +397,8 @@ class RbAnalysis:
         )
 
     def pipeline(self, select_points: bool = False, with_theory: bool = False) -> None:
+        self.check_params()
+        
         if select_points:
             plot_raw_signals(
                 self.Time, self.Normalised_Etalon, self.Sub_Doppler, doppler=self.Doppler
@@ -437,7 +444,7 @@ class RbAnalysis:
 
         if select_points and self.HS_Freq is not None and self.HS_Volt is not None:
             select_hot_spectrum_zeros(self.HS_Freq, self.HS_Volt)
-            self.defaults.save_param("DOPPLER_SLOPE_INT", self.fit_doppler_zero())
+            self.params.save_param("DOPPLER_SLOPE_INT", self.fit_doppler_zero())
 
         detuning_offset = float(sd_peaks.sub_doppler_peak_coefficients[1])  # GHz
         nd = self.normalise_doppler(lin, cropped_data)

@@ -4,4 +4,4 @@
 __pycache__
 
 # Saved parameters from ginput
-saved_params/
+params/

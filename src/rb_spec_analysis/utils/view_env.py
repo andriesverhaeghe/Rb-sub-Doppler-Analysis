@@ -1,15 +1,15 @@
 import sys
 
-import elecsus
-import lmfit
-import matplotlib
-import numpy as np
-import scipy
-import sympy
-import wx
-
 
 def print_packages() -> None:
+    import elecsus
+    import lmfit
+    import matplotlib
+    import numpy as np
+    import scipy
+    import sympy
+    import wx
+    
     print(f"Python version: {sys.version}")
     print(f"numpy Version: {np.__version__}")
     print(f"matplotlib Version: {matplotlib.__version__}")

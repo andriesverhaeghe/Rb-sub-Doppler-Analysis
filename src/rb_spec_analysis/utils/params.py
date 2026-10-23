@@ -82,6 +82,8 @@ class Params:
 
     @classmethod
     def reset(cls):
+        cls.params_loc.mkdir(parents=True, exist_ok=True)
+
         for key, value in cls.defaults_dict.items():
             np.save(cls.params_loc / key, value)
 

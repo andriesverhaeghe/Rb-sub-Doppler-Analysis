@@ -1,3 +1,5 @@
+from enum import Enum
+
 from rb_spec_analysis.analysis import RbAnalysis
 from rb_spec_analysis.plotting.paper import (
     figure_8,
@@ -16,11 +18,19 @@ from rb_spec_analysis.plotting.paper import (
 )
 
 
+class Constants(Enum):
+    FSR = 745  # MHz
+
+
 class RbAnalysisSubDopp(RbAnalysis):
     def __init__(self, use_example_data: bool = False):
         super().__init__(use_example_data)
 
+        self.constants = Constants
+
     def pipeline(self, select_points: bool = False, with_theory: bool = False) -> None:
+        self.check_params()
+
         if with_theory:
             raise ValueError("The sub-Doppler pipeline does not support theory fits")
 
@@ -58,6 +68,30 @@ class RbAnalysisSubDopp(RbAnalysis):
         figure_10(cropped_data, lin, off_res, sd_peaks)
         plot_smoothed_peaks(lin, self.smooth(lin, off_res, cropped_data), sd_peaks)
 
+# --------------------------------------------------------------------------- #
+# Entrypoint (see [project.scripts] in pyproject.toml)
+# --------------------------------------------------------------------------- #
+
+import argparse
+
 
 def pipeline() -> None:
-    RbAnalysisSubDopp(use_example_data=True).pipeline()
+    parser = argparse.ArgumentParser(description="Run the Rb spectrum analysis pipeline.")
+
+    parser.add_argument("--theory", action="store_true", help="Include the theory comparison.")
+    parser.add_argument(
+        "--example-data",
+        action="store_true",
+        help="Use real data instead of the bundled example data.",
+    )
+    parser.add_argument(
+        "--select-points",
+        action="store_true",
+        help="Manually chose plotting points such as cropping range, absorption peaks etc.",
+    )
+
+    args = parser.parse_args()
+
+    RbAnalysisSubDopp(use_example_data=args.example_data).pipeline(
+        select_points=args.select_points, with_theory=args.theory
+    )
