@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.optimize import curve_fit
-from scipy.signal import find_peaks
+from scipy.signal import detrend, find_peaks
 from scipy.stats import binned_statistic
 
 from rb_spec_analysis.plotting.paper import (
@@ -52,7 +52,7 @@ from rb_spec_analysis.utils.polynomials import poly1, poly5, poly7
 
 
 class Constants(Enum):
-    FSR = 745  # MHz
+    FSR = 857.14  # MHz
 
 
 class RbAnalysis:
@@ -185,7 +185,7 @@ class RbAnalysis:
         normalised_etalon = cropped_data.Cropped_Etalon
         zeroed_time = cropped_data.Cropped_Time
 
-        peak_idx, _ = find_peaks(normalised_etalon, height=0.7, distance=100)
+        peak_idx, _ = find_peaks(detrend(normalised_etalon), height=0.0, distance=100)
         peak_idx = np.asarray(peak_idx, dtype=int)
 
         etalon_peaks = normalised_etalon[peak_idx]

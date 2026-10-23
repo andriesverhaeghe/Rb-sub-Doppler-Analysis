@@ -46,6 +46,7 @@ def plot_raw_signals(
 
     plt.plot(time, sub_doppler)
     plt.xlabel("Time (ms)")
+    plt.title("Select two points either side of region")
 
     print(r'Select region of interest')
     crop_points = np.array(plt.ginput(2))
@@ -204,8 +205,8 @@ def figure_8(cropped: CroppedData, lin: Linearised) -> None:
 def sub_doppler_selection(detuning: np.ndarray, sub_dopp: np.ndarray):
     plt.plot(detuning, sub_dopp)
 
-    print(r'Select either side of atomic resonance')
-    x_sub_dopp = np.array(plt.ginput(7))
+    plt.title("Select six points for linear region")
+    x_sub_dopp = np.array(plt.ginput(6))
 
     plt.show(block=False)
     plt.close()
@@ -242,7 +243,7 @@ def plot_off_resonance(cropped: CroppedData, lin: Linearised, off_res: OffResona
 def sub_dopp_absolute_freq(t: np.ndarray, sub_dopp: np.ndarray):
     plt.plot(range(len(t)), sub_dopp)
 
-    print(r'Select either side of absorption trough')
+    plt.title("Select eight points for hyperfine regions")
     x_cuts = np.array(plt.ginput(8))
 
     plt.show(block=False)
@@ -282,12 +283,13 @@ def select_sub_doppler_hyperfine_peaks(
         plt.plot(kdetuning[a:b], sub_dopp[a:b])
         print(r'Select either side of atomic resonance')
 
+        plt.title(f"Select {n_points} of the hyperfine structure")
         x_points = np.array(plt.ginput(n_points))[:, 0]
 
         plt.show(block=False)
         plt.close()
 
-        peaks.append(x_points.tolist())
+        peaks.extend(x_points.tolist())
 
     params.save_param("SUB_DOPPLER_DETECTED_PEAKS", np.array(peaks))
 
