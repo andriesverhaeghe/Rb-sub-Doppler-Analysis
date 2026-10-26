@@ -22,7 +22,7 @@ from rb_spec_analysis.schemas.analysis_schemas import (
 )
 from rb_spec_analysis.utils.data import CroppedData
 from rb_spec_analysis.utils.params import Params
-from rb_spec_analysis.utils.polynomials import poly1, poly5
+from rb_spec_analysis.utils.polynomials import poly1, poly3, poly5
 
 PURPLE, YELLOW, BLUE, RED, OLIVE = "#68246D", "#FFD53A", "#00AEEF", "#BE1E2D", "#AFA961"
 
@@ -115,7 +115,7 @@ def plot_peak_difference(cropped: CroppedData, lin: Linearised) -> None:
 
     plt.figure(figsize=(6, 4))
     plt.plot(lin.peak_time_ms, lin.difference, "o")
-    plt.plot(t_ms, poly1(t_ms, *lin.difference_coeffs))
+    plt.plot(t_ms, poly3(t_ms, *lin.difference_coeffs))
     plt.xlabel("Peak Position (ms)")
     plt.ylabel("Difference (ms)")
     plt.show()
@@ -164,7 +164,7 @@ def figure_8(cropped: CroppedData, lin: Linearised, peak_lines: bool = True) -> 
         zorder=1,
     )
     ax3.scatter(lin.peak_time_ms, lin.difference, s=4, marker="x", color="black", zorder=2, lw=15)
-    ax3.plot(t_ms, poly1(t_ms, *lin.difference_coeffs), color="black", zorder=1, linestyle="dashed")
+    ax3.plot(t_ms, poly3(t_ms, *lin.difference_coeffs), color="black", zorder=1, linestyle="dashed")
     ax4.plot(lin.product, cropped.Cropped_Etalon, color=BLUE)
 
     ax1.set_ylim(0, 1.15)
@@ -231,7 +231,7 @@ def plot_off_resonance(cropped: CroppedData, lin: Linearised, off_res: OffResona
     plt.plot(lin.product, cropped.Cropped_Sub_Doppler)
     plt.plot(lin.product, poly5(lin.product, *off_res.coefficients))
     plt.xlabel(FREQ_LABEL)
-    plt.xlabel("Frequency with Arbitrary Offset (GHz)")
+    plt.xlabel(FREQ_LABEL)
     plt.ylabel("Signal (V)")
     plt.show()
 
@@ -403,24 +403,22 @@ def plot_doppler_selection(lin: Linearised, nd: NormalisedDoppler) -> None:
     for x, y in nd.selection_points:
         plt.scatter(x, y, s=100, marker="x", zorder=2, color="red")
     plt.plot(lin.product, nd.zeroed, zorder=1)
-    plt.xlabel("Frequency with Arbitrary Offset (MHz)")
+    plt.xlabel(FREQ_LABEL)
     plt.ylabel("Signal (V)")
     plt.show()
 
 
 def plot_doppler_fit(lin: Linearised, nd: NormalisedDoppler) -> None:
-    freq_mhz = lin.product
-
     plt.plot(nd.off_resonance_x, nd.off_resonance_trace, "ok")
-    plt.plot(freq_mhz, nd.zeroed)
-    plt.xlabel("Frequency with Arbitrary Offset (MHz)")
+    plt.plot(lin.product, nd.zeroed)
+    plt.xlabel(FREQ_LABEL)
     plt.ylabel("Signal (V)")
     plt.show()
 
-    plt.plot(freq_mhz / 1e3, nd.zeroed)
+    plt.plot(lin.product, nd.zeroed)
     plt.plot(
-        freq_mhz / 1e3,
-        poly5(freq_mhz, *nd.coefficients),
+        lin.product,
+        poly5(lin.product, *nd.coefficients),
         color="black",
         zorder=2,
         linestyle="dashed",
@@ -432,8 +430,8 @@ def plot_doppler_fit(lin: Linearised, nd: NormalisedDoppler) -> None:
 
 def select_doppler_absorption(detuning: np.ndarray, doppler: np.ndarray):
     plt.plot(detuning, doppler)
+    plt.title("Select 6 points either side of atomic resonance")
 
-    print(r'Select either side of atomic resonance')
     x_dopp = plt.ginput(6)
 
     plt.show(block=False)
@@ -443,15 +441,15 @@ def select_doppler_absorption(detuning: np.ndarray, doppler: np.ndarray):
 
 def plot_normalised_doppler(lin: Linearised, nd: NormalisedDoppler, detuning_offset: float) -> None:
     """detuning_offset: intercept of the sub-Doppler absolute-frequency fit (GHz)."""
-    plt.plot(lin.product / 1e3 + detuning_offset, nd.normalised)
+    plt.plot(lin.product + detuning_offset, nd.normalised)
     plt.ylabel("Transmission")
     plt.xlabel("Linear Detuning (GHz)")
     plt.show()
 
 def select_hot_spectrum_zeros(hs_freq: np.ndarray, hs_volt: np.ndarray):
     plt.plot(hs_freq, hs_volt)
+    plt.title("Select either side of the 3 fully absorbed (zero light) regions")
 
-    print(r"Select either side of the 3 fully absorbed (zero light) regions")
     points = np.array(plt.ginput(6))
 
     plt.show(block=False)

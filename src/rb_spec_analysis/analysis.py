@@ -32,6 +32,7 @@ from rb_spec_analysis.plotting.paper import (
     plot_smoothed_peaks,
     plot_sub_doppler,
     plot_theory_fit,
+    select_doppler_absorption,
     select_hot_spectrum_zeros,
     select_sub_doppler_hyperfine_peaks,
     sub_dopp_absolute_freq,
@@ -48,7 +49,7 @@ from rb_spec_analysis.schemas.analysis_schemas import (
 from rb_spec_analysis.utils.array import zero
 from rb_spec_analysis.utils.data import CroppedData, Data, load_data
 from rb_spec_analysis.utils.params import Params
-from rb_spec_analysis.utils.polynomials import poly1, poly5
+from rb_spec_analysis.utils.polynomials import poly1, poly3, poly5
 
 
 class Constants(Enum):
@@ -181,11 +182,15 @@ class RbAnalysis:
             Cropped_Sub_Doppler=self.Sub_Doppler[start:finish],
         )
 
-    def linearise_time(self, cropped_data: CroppedData) -> Linearised:
+    def linearise_time(self, cropped_data: CroppedData, use_detrend: bool = True) -> Linearised:
         normalised_etalon = cropped_data.Cropped_Etalon
         zeroed_time = cropped_data.Cropped_Time
 
-        peak_idx, _ = find_peaks(detrend(normalised_etalon), height=0.0, distance=100)
+        if use_detrend:
+            peak_idx, _ = find_peaks(detrend(normalised_etalon), height=0.02, distance=100)
+        else:
+            peak_idx, _ = find_peaks(normalised_etalon, height=0.8, distance=100)
+
         peak_idx = np.asarray(peak_idx, dtype=int)
 
         etalon_peaks = normalised_etalon[peak_idx]
@@ -195,11 +200,11 @@ class RbAnalysis:
         # Linear fit: peak number -> peak time
         peak_coeffs, _ = curve_fit(poly1, peak_number, peak_time_ms, [1.0] * 2)
 
-        # Deviation from linear, fitted with a 7th order polynomial in time
+        # Deviation from linear, fitted with a 3rd order polynomial in time
         difference = peak_time_ms - poly1(peak_number, *peak_coeffs)
-        difference_coeffs, _ = curve_fit(poly1, peak_time_ms, difference, [1.0] * 2)
+        difference_coeffs, _ = curve_fit(poly3, peak_time_ms, difference, [1.0] * 4)
 
-        linearised_time = zeroed_time - poly1(zeroed_time, *difference_coeffs)
+        linearised_time = zeroed_time - poly3(zeroed_time, *difference_coeffs)
         zeroed_linear_time = zero(linearised_time)
 
         zeroed_time_peaks = zeroed_linear_time[peak_idx]
@@ -281,13 +286,13 @@ class RbAnalysis:
         if doppler is None:
             raise ValueError("Doppler-broadened (20C) data is required to normalise the Doppler")
 
-        x = linearised.product  # MHz
+        x = linearised.product
 
         DOPPLER_SLOPE_INT = self._load("DOPPLER_SLOPE_INT")
         X_DOPP_BROAD = self._load("X_DOPP_BROAD")
 
         zero_level = (
-            DOPPLER_SLOPE_INT[0] * linearised.zeroed_linear_time / 1e3 * linearised.freq_per_time
+            DOPPLER_SLOPE_INT[0] * linearised.zeroed_linear_time * linearised.freq_per_time
             + DOPPLER_SLOPE_INT[1]
         )
         zeroed = doppler - zero_level
@@ -396,7 +401,8 @@ class RbAnalysis:
             self.__fit_elecsus(detuning_73, values_73, *t["73C"]),
         )
 
-    def pipeline(self, select_points: bool = False, with_theory: bool = False) -> None:
+    def pipeline(self, select_points: bool = False, with_theory: bool = False,
+                 use_detrend: bool = True) -> None:
         self.check_params()
         
         if select_points:
@@ -414,7 +420,7 @@ class RbAnalysis:
         )
         plot_cropped_signals(cropped_data)
 
-        lin = self.linearise_time(cropped_data)
+        lin = self.linearise_time(cropped_data, use_detrend)
         plot_etalon_peaks(cropped_data, lin)
         plot_peak_positions(lin)
         plot_peak_difference(cropped_data, lin)
@@ -448,6 +454,9 @@ class RbAnalysis:
         if select_points and self.HS_Freq is not None and self.HS_Volt is not None:
             select_hot_spectrum_zeros(self.HS_Freq, self.HS_Volt)
             self.params.save_param("DOPPLER_SLOPE_INT", self.fit_doppler_zero())
+
+        if select_points and cropped_data.Cropped_Doppler is not None:
+            select_doppler_absorption(lin.product, cropped_data.Cropped_Doppler)
 
         detuning_offset = float(sd_peaks.sub_doppler_peak_coefficients[1])  # GHz
         nd = self.normalise_doppler(lin, cropped_data)
@@ -483,9 +492,15 @@ def pipeline() -> None:
         action="store_true",
         help="Manually chose plotting points such as cropping range, absorption peaks etc.",
     )
+    parser.add_argument(
+        "--detrend",
+        action="store_true",
+        help="Remove a linearly increasing envelope if a Michelson interferometer signal is used."
+    )
 
     args = parser.parse_args()
 
     RbAnalysis(use_example_data=args.example_data).pipeline(
-        select_points=args.select_points, with_theory=args.theory
+        select_points=args.select_points, with_theory=args.theory,
+        use_detrend=args.detrend
     )

@@ -28,7 +28,8 @@ class RbAnalysisSubDopp(RbAnalysis):
 
         self.constants = Constants
 
-    def pipeline(self, select_points: bool = False, with_theory: bool = False) -> None:
+    def pipeline(self, select_points: bool = False, with_theory: bool = False,
+                 use_detrend: bool = True) -> None:
         self.check_params()
 
         if with_theory:
@@ -41,7 +42,7 @@ class RbAnalysisSubDopp(RbAnalysis):
 
         cropped_data = self.crop_frequency()
 
-        lin = self.linearise_time(cropped_data)
+        lin = self.linearise_time(cropped_data, use_detrend)
         plot_etalon_peaks(cropped_data, lin)
         plot_peak_positions(lin)
         plot_peak_difference(cropped_data, lin)
@@ -91,9 +92,15 @@ def pipeline() -> None:
         action="store_true",
         help="Manually chose plotting points such as cropping range, absorption peaks etc.",
     )
+    parser.add_argument(
+        "--detrend",
+        action="store_true",
+        help="Remove a linearly increasing envelope if a Michelson interferometer signal is used."
+    )
 
     args = parser.parse_args()
 
     RbAnalysisSubDopp(use_example_data=args.example_data).pipeline(
-        select_points=args.select_points, with_theory=args.theory
+        select_points=args.select_points, with_theory=args.theory,
+        use_detrend=args.detrend
     )

@@ -21,6 +21,13 @@ This project uses the UV package manager from Astral. Written in Rust, UV handle
 https://docs.astral.sh/uv/getting-started/installation/
 ```
 
+This repo also requires a Git executable on the system path so that uv can install the ElecSus dependency from GitHub. You can check you have all required dependencies available by running the following commands. They should both return a version without failing.
+
+```
+uv --version
+git --version
+```
+
 ## Installation
 
 The `pyproject.toml` file to this repo contains two packages whose linux wheels are very slow to install, and typically result in sync failures - wxpython and ElecSus (which depends on wxpython). To allow Github Actions to succeed as well as building and running of reduced functionality on Linux, these packages are optional dependencies. To install the core and dev dependencies run:
